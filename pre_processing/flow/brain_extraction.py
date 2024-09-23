@@ -20,6 +20,4 @@ def extract_brain(input_path, output_path):
     - output_path (str): Ruta donde se guardará la imagen con el cerebro extraído.
     """
     # Extraer el cerebro
-    result = bet(input_path, output_path, f=0.32)
-
-    return result.outputs
+    bet(input_path, output_path, f=0.32)
