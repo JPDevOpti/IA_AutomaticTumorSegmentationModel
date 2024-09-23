@@ -40,8 +40,8 @@ def preprocess_image(input_image_path, reference_image_path, output_path):
 
 
 
-reference_image_path = '../paciente_pre_procesado/UPENN-GBM-00001_11_T1.nii' # temporal reference for reorientation
-input_image_path = '../paciente_no_pre_procesado/UPENN-GBM-00096_11_T1_unstripped.nii'
+reference_image_path = '../paciente_pre_procesado/UPENN-GBM-00001_11_T2.nii' # temporal reference for reorientation
+input_image_path = '../paciente_no_pre_procesado/UPENN-GBM-00096_11_T2_unstripped.nii'
 output_path = './outputs'
 
 result = preprocess_image(input_image_path, reference_image_path, output_path)
