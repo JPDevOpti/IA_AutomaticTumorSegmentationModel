@@ -1,7 +1,7 @@
-from flow.utils import load_nii
-from flow.co_registration import reorient_image
-from flow.normalization import normalize_image
-from flow.brain_extraction import extract_brain
+from Scripts.utils import load_nii
+from Scripts.co_registration import reorient_image
+from Scripts.normalization import normalize_image
+from Scripts.brain_extraction import extract_brain
 import os
 
 def preprocess_image(input_image_path, reference_image_path, output_path):
