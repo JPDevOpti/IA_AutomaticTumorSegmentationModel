@@ -32,7 +32,7 @@ def process_data(input_file, source_folder, destination_folder):
         eliminar_carpetas(source_folder, ids_permitidos)
 
         # Crear la carpeta de destino para T1GD
-        t1gd_folder = os.path.join(destination_folder, 'T1GD')
+        t1gd_folder = os.path.join(destination_folder, 'T1GD_not_processed')
         if not os.path.exists(t1gd_folder):
             os.makedirs(t1gd_folder)
 
