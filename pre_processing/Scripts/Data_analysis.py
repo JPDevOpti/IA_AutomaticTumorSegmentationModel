@@ -5,17 +5,16 @@ import matplotlib.pyplot as plt
 from scipy.stats import ks_2samp
 from skimage.metrics import structural_similarity as ssim
 
-#Directory root for preprocessed and original images
+# Directory root for preprocessed and original images
+preprocessed_dir = '../../dataset/preprocessed/outputs2'
+original_dir = '../../dataset/preprocessed/T1GD_not_processed2'
 
-preprocessed_dir = ''
-original_dir = ''
-
-#Load Nifti image format function 
+# Load Nifti image format function 
 def load_nifti_image(file_path):
     img = nib.load(file_path)
     return img.get_fdata()
 
-#Basic statistics function
+# Basic statistics function
 def calculate_statistics(image_data):
     mean_intensity = np.mean(image_data)
     std_intensity = np.std(image_data)
@@ -24,100 +23,92 @@ def calculate_statistics(image_data):
     
     return mean_intensity, std_intensity, min_intensity, max_intensity
 
-def plot_histogram(image_data, title="Intensities Histogram"):
-    plt.hist(image_data.flatten(), bins=100, color='blue', alpha=0.7)
-    plt.title(title)
-    plt.xlabel('Intensidad')
-    plt.ylabel('Frecuencia')
-    plt.show()
-
-#Kolmogorov-Smirnov test to compare distributions.
+# Kolmogorov-Smirnov test to compare distributions
 def ks_test(original_data, preprocessed_data):
     ks_stat, p_value = ks_2samp(original_data.flatten(), preprocessed_data.flatten())
     return ks_stat, p_value
 
-# Smoothing analysis using Fourier transform.
+# Smoothing analysis using Fourier transform
 def fourier_analysis(original_data, preprocessed_data):
-   # Fourier transform of the original and preprocessed image
     original_fft = np.fft.fftn(original_data)
     preprocessed_fft = np.fft.fftn(preprocessed_data)
     
-    
-    # Frequency magnitudes
     original_magnitude = np.abs(original_fft)
     preprocessed_magnitude = np.abs(preprocessed_fft)
     
-    # Plot the magnitude of the frequencies on a logarithmic scale
-    plt.loglog(np.sort(original_magnitude.flatten())[::-1], label='Original')
-    plt.loglog(np.sort(preprocessed_magnitude.flatten())[::-1], label='Preprocesada')
-    plt.title('Transformada de Fourier - Magnitud de Frecuencias')
-    plt.legend()
-    plt.show()
+    return original_magnitude, preprocessed_magnitude
 
-# Registry analysis using structural similarity.
+# Registration analysis using structural similarity
 def registration_analysis(original_data, preprocessed_data):
-    # Normalize the data to avoid problems with different ranges
     original_norm = (original_data - np.min(original_data)) / (np.max(original_data) - np.min(original_data))
     preprocessed_norm = (preprocessed_data - np.min(preprocessed_data)) / (np.max(preprocessed_data) - np.min(preprocessed_data))
     
-    # Calculate the structural similarity index (SSIM)
     ssim_index = ssim(original_norm, preprocessed_norm, data_range=preprocessed_norm.max() - preprocessed_norm.min())
     
     return ssim_index
 
-# Initialize lists to store statistical and smoothing/logging results
+# Initialize lists to store results
 stats_preprocessed = []
 stats_original = []
 ks_results = []
 ssim_results = []
+fourier_results = []
 
 # Iterate through all the images in the preprocessed image directory
 for file_name in os.listdir(preprocessed_dir):
-    if file_name.endswith('.nii'):
-        # Path to the preprocessed image and its original counterpart
+    print(f"Processing image: {file_name}")
+    if file_name.endswith('.nii') or file_name.endswith('.nii.gz'):
         preprocessed_path = os.path.join(preprocessed_dir, file_name)
-        original_path = os.path.join(original_dir, file_name)
+        original_file_name = file_name.replace('.nii_brain_extracted.nii', '.nii.gz')
+        original_path = os.path.join(original_dir, original_file_name)
         
-        # Load the images
         preprocessed_data = load_nifti_image(preprocessed_path)
         original_data = load_nifti_image(original_path)
         
-        # Calculate basic statistics
-        preprocessed_stats = calculate_statistics(preprocessed_data)
-        original_stats = calculate_statistics(original_data)
+        stats_preprocessed.append(calculate_statistics(preprocessed_data))
+        stats_original.append(calculate_statistics(original_data))
         
-        # Store the statistics
-        stats_preprocessed.append(preprocessed_stats)
-        stats_original.append(original_stats)
+        ks_results.append(ks_test(original_data, preprocessed_data))
         
-        # Perform the Kolmogorov-Smirnov test
-        ks_stat, p_value = ks_test(original_data, preprocessed_data)
-        ks_results.append((ks_stat, p_value))
+        ssim_results.append(registration_analysis(original_data, preprocessed_data))
         
-        # Plot the histogram of the preprocessed image
-        plot_histogram(preprocessed_data, title=f'Histogram of {file_name} - Preprocessed')
-        
-        # Plot the histogram of the original image
-        plot_histogram(original_data, title=f'Histogram of {file_name} - Original')
-        
-        # Smoothing analysis via Fourier
-        print(f"Smoothing analysis (Fourier) for {file_name}:")
-        fourier_analysis(original_data, preprocessed_data)
-        
-        # Registration analysis using SSIM
-        ssim_index = registration_analysis(original_data, preprocessed_data)
-        ssim_results.append(ssim_index)
-        print(f"SSIM index for {file_name}: {ssim_index}")
-        
-        # Display KS test results for each image
-        print(f"Image: {file_name}")
-        print(f"Preprocessed statistics (Mean, Std. Dev, Min, Max): {preprocessed_stats}")
-        print(f"Original statistics (Mean, Std. Dev, Min, Max): {original_stats}")
-        print(f"KS test (Statistic, p-value): {ks_stat}, {p_value}\n")
+        fourier_results.append(fourier_analysis(original_data, preprocessed_data))
 
-# Global summary
+# Calculate averages
+avg_stats_preprocessed = np.mean(stats_preprocessed, axis=0)
+avg_stats_original = np.mean(stats_original, axis=0)
+avg_ks_stat, avg_p_value = np.mean(ks_results, axis=0)
+avg_ssim = np.mean(ssim_results)
+
+# Plot average histograms
+def plot_average_histogram(data_list, title):
+    avg_data = np.mean([d.flatten() for d in data_list], axis=0)
+    plt.figure(figsize=(10, 6))
+    plt.hist(avg_data, bins=100, color='blue', alpha=0.7)
+    plt.title(title)
+    plt.xlabel('Intensity')
+    plt.ylabel('Frequency')
+    plt.show()
+
+plot_average_histogram([load_nifti_image(os.path.join(preprocessed_dir, f)) for f in os.listdir(preprocessed_dir) if f.endswith('.nii') or f.endswith('.nii.gz')],
+                       'Average Histogram - Preprocessed Images')
+plot_average_histogram([load_nifti_image(os.path.join(original_dir, f)) for f in os.listdir(original_dir) if f.endswith('.nii.gz')],
+                       'Average Histogram - Original Images')
+
+# Plot average Fourier analysis
+avg_original_magnitude = np.mean([r[0] for r in fourier_results], axis=0)
+avg_preprocessed_magnitude = np.mean([r[1] for r in fourier_results], axis=0)
+
+plt.figure(figsize=(10, 6))
+plt.loglog(np.sort(avg_original_magnitude.flatten())[::-1], label='Original')
+plt.loglog(np.sort(avg_preprocessed_magnitude.flatten())[::-1], label='Preprocessed')
+plt.title('Average Fourier Transform - Frequency Magnitudes')
+plt.legend()
+plt.show()
+
+# Print global summary
 print("### GLOBAL SUMMARY ###")
-print("Preprocessed statistics for all images:", stats_preprocessed)
-print("Original statistics for all images:", stats_original)
-print("KS test results (Statistic, p-value):", ks_results)
-print("SSIM indices (Registration):", ssim_results)
+print(f"Average Preprocessed statistics (Mean, Std. Dev, Min, Max): {avg_stats_preprocessed}")
+print(f"Average Original statistics (Mean, Std. Dev, Min, Max): {avg_stats_original}")
+print(f"Average KS test (Statistic, p-value): {avg_ks_stat}, {avg_p_value}")
+print(f"Average SSIM index (Registration): {avg_ssim}")

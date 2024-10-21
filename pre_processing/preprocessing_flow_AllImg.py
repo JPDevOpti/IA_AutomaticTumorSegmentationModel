@@ -5,6 +5,7 @@ from Scripts.utils import load_nii
 from Scripts.co_registration import reorient_image
 from Scripts.normalization import normalize_image
 from Scripts.brain_extraction import extract_brain
+from Scripts.filter import apply_gaussian_filter
 
 def preprocess_image(input_image_path, reference_image_path, output_path):
     """
@@ -30,15 +31,17 @@ def preprocess_image(input_image_path, reference_image_path, output_path):
     normalized_nifti_image.to_filename(temp_output_path)
 
     # extract the brain from the normalized image
-    brain_extracted_output_path = os.path.join(output_path, f'{os.path.splitext(os.path.basename(input_image_path))[0]}_brain_extracted.nii.gz')
-    extract_brain(temp_output_path, brain_extracted_output_path)
-
-    print(f"Proceso de preprocesamiento finalizado. Imagen guardada en {brain_extracted_output_path}")
-
-    # delete the temporary file
-    os.remove(temp_output_path)
+    extract_brain(temp_output_path, temp_output_path)
     
-    return brain_extracted_output_path
+    #apply gaussian filter, save the result in the same path
+    apply_gaussian_filter(temp_output_path, temp_output_path)
+
+    # move the processed image to the final output path
+    finished_output_path = os.path.join(output_path, f'{os.path.splitext(os.path.basename(input_image_path))[0]}_brain_extracted.nii')
+    os.rename(temp_output_path, finished_output_path)
+    print(f"Proceso de preprocesamiento finalizado. Imagen guardada en {finished_output_path}")
+
+    return finished_output_path
 
 def process_folder(input_folder, reference_image_path, output_folder):
     """
@@ -59,7 +62,7 @@ def process_folder(input_folder, reference_image_path, output_folder):
                 
                 try:
                     result = preprocess_image(input_path, reference_image_path, output_path)
-                    print(f"Procesado: {input_path} -> {result}")
+                    print(f"---- Procesado: {input_path} -> {result} \n")
                 except Exception as e:
                     print(f"Error al procesar {input_path}: {str(e)}")
 
